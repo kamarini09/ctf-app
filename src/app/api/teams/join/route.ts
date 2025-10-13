@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   }
 
   const admin = sbAdmin();
-  const { data: team, error } = await admin.from("teams").select("id, name, join_code").eq("join_code", joinCode.trim().toUpperCase()).single();
+  const { data: team, error } = await admin.from("teams").select("id, name, code").eq("code", joinCode.trim().toUpperCase()).single();
 
   if (error || !team) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });

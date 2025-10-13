@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
 
-type Team = { id: string; name: string; join_code: string };
+type Team = { id: string; name: string; code: string };
 
 export default function TeamsPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function TeamsPage() {
       const { data: prof } = await sb.from("profiles").select("team_id").eq("id", user.id).single();
 
       if (prof?.team_id) {
-        const { data: t } = await sb.from("teams").select("id, name, join_code").eq("id", prof.team_id).single();
+        const { data: t } = await sb.from("teams").select("id, name, code").eq("id", prof.team_id).single();
         if (t) setTeam(t as Team);
       }
       setLoading(false);
@@ -90,7 +90,7 @@ export default function TeamsPage() {
             <span className="font-medium">Name:</span> {team.name}
           </p>
           <p className="mb-1">
-            <span className="font-medium">Join code:</span> <code>{team.join_code}</code>
+            <span className="font-medium">Join code:</span> <code>{team.code}</code>
           </p>
         </section>
       ) : (

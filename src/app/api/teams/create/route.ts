@@ -9,9 +9,9 @@ export async function POST(req: Request) {
   }
 
   const admin = sbAdmin();
-  const join_code = randomCode(6);
+  const code = randomCode(6);
 
-  const { data: team, error } = await admin.from("teams").insert({ name, join_code, created_by: userId }).select("*").single();
+  const { data: team, error } = await admin.from("teams").insert({ name, code, created_by: userId }).select("*").single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
