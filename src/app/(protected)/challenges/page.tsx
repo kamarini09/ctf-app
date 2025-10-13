@@ -14,22 +14,42 @@ type ChallengeDetail = {
   link_url: string | null;
 };
 
+const FLAG_RE = /^CTF\{[A-Za-z0-9_]{1,80}\}$/;
+
 export default function ChallengesPage() {
   const router = useRouter();
+
+  // auth + user
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // list + loading
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ChallengeListItem[]>([]);
-  const [selected, setSelected] = useState<ChallengeDetail | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // simple client-side auth guard
+  // modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selected, setSelected] = useState<ChallengeDetail | null>(null);
+
+  // actions state
+  const [flag, setFlag] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // simple client-side auth guard + userId
   useEffect(() => {
     sb.auth.getUser().then(({ data }) => {
-      if (!data.user) router.replace("/login");
+      const user = data.user;
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+      setUserId(user.id);
     });
   }, [router]);
 
-  // load challenges (may be empty initially)
+  // load challenges once
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -38,7 +58,7 @@ export default function ChallengesPage() {
         const res = await fetch("/api/challenges");
         if (!res.ok) throw new Error("Failed to load challenges");
         const json = (await res.json()) as ChallengeListItem[];
-        setItems(json || []);
+        setItems(Array.isArray(json) ? json : []);
       } catch (e: any) {
         setError(e.message || "Error loading challenges");
       } finally {
@@ -47,7 +67,7 @@ export default function ChallengesPage() {
     })();
   }, []);
 
-  // placeholder cards if DB is empty (for design preview)
+  // placeholder cards for empty DB
   const placeholders = useMemo(
     () =>
       Array.from({ length: 6 }).map((_, i) => ({
@@ -64,18 +84,21 @@ export default function ChallengesPage() {
   const openModal = async (id: string, placeholder?: boolean) => {
     setSelected(null);
     setModalOpen(true);
+    setFlag("");
+    setNotice(null);
+
     if (placeholder) {
-      // show a template modal for design
       setSelected({
         id,
         title: "Sample Challenge",
         points: 100,
-        prompt: "This is a template modal. When you add challenges in Supabase, this will show the real prompt.\n\nFlags must look like `CTF{ANSWER}`.",
+        prompt: "This is a template. Once you add challenges in Supabase, this will show the real prompt.\n\nFlags must look like `CTF{ANSWER}`.",
         attachment_url: null,
         link_url: null,
       });
       return;
     }
+
     try {
       const res = await fetch(`/api/challenges/${id}`);
       if (!res.ok) throw new Error("Not found");
@@ -96,11 +119,66 @@ export default function ChallengesPage() {
   const closeModal = () => {
     setModalOpen(false);
     setSelected(null);
+    setFlag("");
+    setNotice(null);
+  };
+
+  const handleDownload = async () => {
+    if (!selected?.attachment_url) return;
+    setDownloadLoading(true);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/attachments/sign-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: selected.attachment_url }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to get link");
+      window.open(json.url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      setNotice(e.message || "Download error");
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  const handleSubmitFlag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected?.id || !userId) return;
+
+    const trimmed = flag.trim();
+    if (!FLAG_RE.test(trimmed)) {
+      setNotice("Invalid flag format. Use CTF{ANSWER}.");
+      return;
+    }
+
+    setSubmitting(true);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, challengeId: selected.id, flag: trimmed }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Submit failed");
+
+      if (json.correct) {
+        setNotice(`✅ Correct! +${json.points} pts`);
+      } else {
+        setNotice("❌ Not correct. Keep trying!");
+      }
+    } catch (e: any) {
+      setNotice(e.message || "Submission error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <main className="max-w-6xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Challenges</h1>
         {items.length === 0 && <span className="text-sm text-gray-600">Showing template cards — add challenges in Supabase to replace these.</span>}
       </div>
@@ -112,9 +190,9 @@ export default function ChallengesPage() {
           <button key={c.id} onClick={() => openModal(c.id, (c as any).placeholder ? true : false)} className="group rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-baseline justify-between">
               <h2 className="text-lg font-semibold group-hover:underline">{c.title}</h2>
-              <span className="text-sm rounded-full border px-2 py-0.5">{c.points} pts</span>
+              <span className="rounded-full border px-2 py-0.5 text-sm">{c.points} pts</span>
             </div>
-            <p className="mt-2 text-sm text-gray-600 line-clamp-2">Click to view details and submit a flag.</p>
+            <p className="mt-2 line-clamp-2 text-sm text-gray-600">Click to view details and submit a flag.</p>
           </button>
         ))}
       </div>
@@ -149,24 +227,22 @@ export default function ChallengesPage() {
                       Open Link
                     </a>
                   )}
+
                   {selected.attachment_url && (
-                    <button className="rounded bg-slate-700 px-3 py-2 text-white hover:bg-slate-800" onClick={() => alert("Download will be wired via signed URL later.")}>
-                      Download Attachment
+                    <button className="rounded bg-slate-700 px-3 py-2 text-white hover:bg-slate-800 disabled:opacity-60" onClick={handleDownload} disabled={downloadLoading}>
+                      {downloadLoading ? "Preparing…" : "Download Attachment"}
                     </button>
                   )}
                 </div>
 
-                {/* Flag input (stubbed – real submit next step) */}
-                <form
-                  className="mt-6 flex gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    alert("Flag submit will be implemented next.");
-                  }}
-                >
-                  <input type="text" inputMode="text" placeholder="CTF{ANSWER}" className="flex-1 rounded border px-3 py-2" />
-                  <button className="rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">Submit</button>
+                <form className="mt-6 flex gap-2" onSubmit={handleSubmitFlag}>
+                  <input type="text" placeholder="CTF{ANSWER}" className="flex-1 rounded border px-3 py-2" value={flag} onChange={(e) => setFlag(e.target.value)} required />
+                  <button className="rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 disabled:opacity-60" disabled={submitting}>
+                    {submitting ? "Submitting…" : "Submit"}
+                  </button>
                 </form>
+
+                {notice && <p className="mt-3 text-sm">{notice}</p>}
               </>
             )}
           </div>
