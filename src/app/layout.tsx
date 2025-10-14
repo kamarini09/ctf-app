@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "KvaliCTF",
+  title: "CTF",
   description: "Capture The Flag",
 };
 

@@ -5,6 +5,7 @@ import crypto from "crypto";
 
 const FLAG_RE = /^CTF\{[A-Za-z0-9_]{1,80}\}$/;
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {

@@ -8,6 +8,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -18,7 +19,11 @@ export default function SignupPage() {
     setErr(null);
     setMsg(null);
 
-    const { data, error } = await sb.auth.signUp({ email, password });
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: name } },
+    });
 
     setLoading(false);
 
@@ -51,6 +56,11 @@ export default function SignupPage() {
         <div>
           <label className="block text-sm mb-1">Password</label>
           <input type="password" required minLength={6} className="w-full border rounded px-3 py-2" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" />
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">Display name</label>
+          <input type="text" required className="w-full border rounded px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., CyberNinja" />
         </div>
 
         <button type="submit" disabled={loading} className="w-full rounded bg-blue-600 text-white py-2 font-semibold disabled:opacity-60">

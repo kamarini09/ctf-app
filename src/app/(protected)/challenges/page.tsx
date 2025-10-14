@@ -8,7 +8,7 @@ type ChallengeListItem = { id: string; title: string; points: number };
 type ChallengeDetail = {
   id: string;
   title: string;
-  prompt: string;
+  description: string;
   points: number;
   attachment_url: string | null;
   link_url: string | null;
@@ -92,7 +92,7 @@ export default function ChallengesPage() {
         id,
         title: "Sample Challenge",
         points: 100,
-        prompt: "This is a template. Once you add challenges in Supabase, this will show the real prompt.\n\nFlags must look like `CTF{ANSWER}`.",
+        description: "This is a template. Once you add challenges in Supabase, this will show the real description.\n\nFlags must look like `CTF{ANSWER}`.",
         attachment_url: null,
         link_url: null,
       });
@@ -109,7 +109,7 @@ export default function ChallengesPage() {
         id,
         title: "Challenge unavailable",
         points: 0,
-        prompt: "We could not load this challenge. Try again later.",
+        description: "We could not load this challenge. Try again later.",
         attachment_url: null,
         link_url: null,
       });
@@ -219,7 +219,7 @@ export default function ChallengesPage() {
                   </button>
                 </div>
 
-                <pre className="mt-4 whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm">{selected.prompt}</pre>
+                <pre className="mt-4 whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm">{selected.description}</pre>
 
                 <div className="mt-4 flex flex-wrap gap-3">
                   {selected.link_url && (
