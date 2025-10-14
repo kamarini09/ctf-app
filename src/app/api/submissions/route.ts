@@ -1,0 +1,71 @@
+// Team-level solves (one solve per team per challenge)
+export const dynamic = "force-dynamic";
+
+import { NextResponse } from "next/server";
+import { sbAdmin } from "@/lib/supabase-server";
+
+// Web Crypto hash (Edge/Node)
+async function sha256Hex(input: string) {
+  const enc = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+const FLAG_RE = /^CTF\{[A-Za-z0-9_]{1,80}\}$/;
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const userId = body?.userId as string | undefined;
+    const challengeId = body?.challengeId as string | undefined;
+    const flag = body?.flag as string | undefined;
+
+    if (!userId || !challengeId || typeof flag !== "string") {
+      return NextResponse.json({ ok: false, message: "Missing fields" }, { status: 400 });
+    }
+
+    const trimmed = flag.trim();
+    if (!FLAG_RE.test(trimmed)) {
+      return NextResponse.json({ ok: false, message: "Invalid flag format (use CTF{ANSWER})" }, { status: 400 });
+    }
+
+    const sb = sbAdmin();
+
+    // Challenge (active + hash)
+    const { data: ch, error: chErr } = await sb.from("challenges").select("id, flag_hash, points, is_active").eq("id", challengeId).single();
+    if (chErr || !ch) return NextResponse.json({ ok: false, message: "Challenge not found" }, { status: 404 });
+    if (!ch.is_active) return NextResponse.json({ ok: false, message: "Challenge inactive" }, { status: 400 });
+
+    // User must be on a team
+    const { data: prof, error: profErr } = await sb.from("profiles").select("team_id").eq("id", userId).single();
+    if (profErr || !prof) return NextResponse.json({ ok: false, message: "Profile not found" }, { status: 400 });
+    if (!prof.team_id) return NextResponse.json({ ok: false, message: "Join a team first." }, { status: 400 });
+
+    // Check flag correctness
+    const correct = (await sha256Hex(trimmed)) === ch.flag_hash;
+    if (!correct) return NextResponse.json({ ok: true, correct: false });
+
+    // Already solved by this team?
+    const { data: existing } = await sb.from("submissions").select("id").eq("team_id", prof.team_id).eq("challenge_id", challengeId).maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({
+        ok: true,
+        correct: true,
+        alreadySolved: true,
+        message: "Correct — but your team already solved this.",
+        points: ch.points,
+      });
+    }
+
+    // Insert team solve (idempotent) — requires UNIQUE(team_id, challenge_id)
+    const { error: upErr } = await sb.from("submissions").upsert({ user_id: userId, team_id: prof.team_id, challenge_id: challengeId }, { onConflict: "team_id,challenge_id", ignoreDuplicates: true });
+    if (upErr) return NextResponse.json({ ok: false, message: upErr.message }, { status: 400 });
+
+    return NextResponse.json({ ok: true, correct: true, points: ch.points });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, message: e?.message || "Server error" }, { status: 500 });
+  }
+}

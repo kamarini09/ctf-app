@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
 
@@ -27,6 +27,9 @@ export default function ChallengesPage() {
   const [items, setItems] = useState<ChallengeListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // solved (team-wide)
+  const [solved, setSolved] = useState<Set<string>>(new Set());
+
   // modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<ChallengeDetail | null>(null);
@@ -37,7 +40,7 @@ export default function ChallengesPage() {
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // simple client-side auth guard + userId
+  // auth guard + userId
   useEffect(() => {
     sb.auth.getUser().then(({ data }) => {
       const user = data.user;
@@ -49,7 +52,7 @@ export default function ChallengesPage() {
     });
   }, [router]);
 
-  // load challenges once
+  // load challenges
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -67,37 +70,25 @@ export default function ChallengesPage() {
     })();
   }, []);
 
-  // placeholder cards for empty DB
-  const placeholders = useMemo(
-    () =>
-      Array.from({ length: 6 }).map((_, i) => ({
-        id: `placeholder-${i + 1}`,
-        title: `Challenge #${i + 1}`,
-        points: (i + 1) * 50,
-        placeholder: true,
-      })),
-    []
-  ) as Array<ChallengeListItem & { placeholder?: true }>;
+  // fetch team solves once we know the user
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/me/solves?userId=${userId}`);
+        const ids: string[] = await res.json();
+        setSolved(new Set(ids));
+      } catch {
+        // ignore
+      }
+    })();
+  }, [userId]);
 
-  const listToRender = items.length ? items : placeholders;
-
-  const openModal = async (id: string, placeholder?: boolean) => {
+  const openModal = async (id: string) => {
     setSelected(null);
     setModalOpen(true);
     setFlag("");
     setNotice(null);
-
-    if (placeholder) {
-      setSelected({
-        id,
-        title: "Sample Challenge",
-        points: 100,
-        description: "This is a template. Once you add challenges in Supabase, this will show the real description.\n\nFlags must look like `CTF{ANSWER}`.",
-        attachment_url: null,
-        link_url: null,
-      });
-      return;
-    }
 
     try {
       const res = await fetch(`/api/challenges/${id}`);
@@ -161,11 +152,24 @@ export default function ChallengesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, challengeId: selected.id, flag: trimmed }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Submit failed");
+
+      const ct = res.headers.get("content-type") || "";
+      const raw = await res.text();
+      const json = ct.includes("application/json") ? JSON.parse(raw) : { ok: false, message: raw.slice(0, 200) };
+
+      if (!res.ok) throw new Error(json.error || json.message || "Submit failed");
 
       if (json.correct) {
-        setNotice(`✅ Correct! +${json.points} pts`);
+        if (json.alreadySolved) {
+          setNotice("✅ Correct — but your team already solved this.");
+        } else {
+          setNotice(`✅ Correct! +${json.points} pts`);
+        }
+        setSolved((prev) => {
+          const next = new Set(prev);
+          next.add(selected.id);
+          return next;
+        });
       } else {
         setNotice("❌ Not correct. Keep trying!");
       }
@@ -180,22 +184,37 @@ export default function ChallengesPage() {
     <main className="max-w-6xl mx-auto p-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Challenges</h1>
-        {items.length === 0 && <span className="text-sm text-gray-600">Showing template cards — add challenges in Supabase to replace these.</span>}
       </div>
 
       {error && <div className="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-red-700">{error}</div>}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy={loading ? "true" : "false"}>
-        {listToRender.map((c) => (
-          <button key={c.id} onClick={() => openModal(c.id, (c as any).placeholder ? true : false)} className="group rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-lg font-semibold group-hover:underline">{c.title}</h2>
-              <span className="rounded-full border px-2 py-0.5 text-sm">{c.points} pts</span>
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="animate-pulse space-y-3">
+                <div className="h-5 w-2/3 rounded bg-gray-200" />
+                <div className="h-4 w-1/3 rounded bg-gray-200" />
+                <div className="h-3 w-full rounded bg-gray-200" />
+              </div>
             </div>
-            <p className="mt-2 line-clamp-2 text-sm text-gray-600">Click to view details and submit a flag.</p>
-          </button>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-xl border bg-white p-6 text-center text-gray-600">No challenges yet. Check back soon.</div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((c) => (
+            <button key={c.id} onClick={() => openModal(c.id)} className={`group rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ` + (solved.has(c.id) ? "bg-green-50 border-green-300" : "bg-white border-gray-200")}>
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-lg font-semibold group-hover:underline">{c.title}</h2>
+                <span className="rounded-full border px-2 py-0.5 text-sm">{c.points} pts</span>
+              </div>
+              <p className="mt-2 line-clamp-2 text-sm text-gray-600">Click to view details and submit a flag.</p>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Modal */}
       {modalOpen && (
