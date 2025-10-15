@@ -14,14 +14,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* === Dark Mode === */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 /* === Global Defaults === */
 body {
   background: var(--background);

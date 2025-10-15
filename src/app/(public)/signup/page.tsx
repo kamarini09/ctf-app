@@ -63,7 +63,7 @@ export default function SignupPage() {
           <input type="text" required className="w-full border rounded px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., CyberNinja" />
         </div>
 
-        <button type="submit" disabled={loading} className="w-full rounded bg-blue-600 text-white py-2 font-semibold disabled:opacity-60">
+        <button type="submit" disabled={loading} className="w-full rounded bg-violet-600 text-white py-2 font-semibold disabled:opacity-60">
           {loading ? "Creating…" : "Create account"}
         </button>
 
@@ -73,7 +73,7 @@ export default function SignupPage() {
 
       <p className="mt-4 text-sm">
         Already have an account?{" "}
-        <a href="/login" className="text-blue-700 underline">
+        <a href="/login" className="text-violet-600 underline">
           Log in
         </a>
       </p>

@@ -43,8 +43,8 @@ export default function LoginPage() {
           <input type="password" required className="w-full border rounded px-3 py-2" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" />
         </div>
 
-        <button type="submit" disabled={loading} className="w-full rounded bg-blue-600 text-white py-2 font-semibold disabled:opacity-60">
-          {loading ? "Signing in…" : "Sign in"}
+        <button type="submit" disabled={loading} className="w-full rounded bg-violet-600 text-white py-2 font-semibold disabled:opacity-60">
+          {loading ? "Loging in…" : "Log in"}
         </button>
 
         {err && <p className="text-red-600 text-sm">{err}</p>}
@@ -52,7 +52,7 @@ export default function LoginPage() {
 
       <p className="mt-4 text-sm">
         No account?{" "}
-        <a href="/signup" className="text-blue-700 underline">
+        <a href="/signup" className="text-violet-600 underline">
           Sign up
         </a>
       </p>
