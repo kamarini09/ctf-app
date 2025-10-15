@@ -8,21 +8,47 @@ import { useEffect, useMemo, useState } from "react";
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+
   const [label, setLabel] = useState<string | null>(null);
+  const [authLoaded, setAuthLoaded] = useState(false); // gate UI until we know
+
+  // Helper to populate label from a session
+  const setFromSession = async (session: Awaited<ReturnType<typeof sb.auth.getSession>>["data"]["session"]) => {
+    const user = session?.user;
+    if (!user) {
+      setLabel(null);
+      return;
+    }
+    const { data: prof } = await sb.from("profiles").select("display_name").eq("id", user.id).single();
+    setLabel(prof?.display_name ?? user.email ?? null);
+  };
 
   useEffect(() => {
+    let unsub: (() => void) | undefined;
+
     (async () => {
-      const { data } = await sb.auth.getUser();
-      const user = data.user;
-      if (!user) return setLabel(null);
-      const { data: prof } = await sb.from("profiles").select("display_name").eq("id", user.id).single();
-      setLabel(prof?.display_name ?? user.email ?? null);
+      // 1) initial read
+      const { data } = await sb.auth.getSession();
+      await setFromSession(data.session);
+      setAuthLoaded(true);
+
+      // 2) subscribe to future changes
+      const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
+        setFromSession(session);
+      });
+      unsub = () => listener.subscription.unsubscribe();
     })();
+
+    return () => {
+      unsub?.();
+    };
   }, []);
 
   const initial = useMemo(() => (label ? (label.trim()[0] || "U").toUpperCase() : null), [label]);
 
   const logout = async () => {
+    // optimistic UI
+    setLabel(null);
     await sb.auth.signOut();
     router.replace("/login");
   };
@@ -41,12 +67,10 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex h-14 items-center justify-between gap-3">
-          {/* Wordmark (no logo) */}
           <Link href="/dashboard" className="text-lg font-extrabold tracking-tight text-violet-700" aria-label="Go to dashboard">
             KvaliCTF
           </Link>
 
-          {/* Center links */}
           <div className="flex items-center gap-1">
             <NavLink href="/rules">Rules</NavLink>
             <NavLink href="/challenges">Challenges</NavLink>
@@ -56,7 +80,13 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            {label ? (
+            {!authLoaded ? (
+              // tiny skeleton while auth state loads
+              <>
+                <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+                <div className="h-8 w-20 rounded-md bg-gray-200 animate-pulse" />
+              </>
+            ) : label ? (
               <>
                 <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-white font-semibold shadow-sm ring-2 ring-violet-100" title={label} aria-label={label}>
                   {initial}
