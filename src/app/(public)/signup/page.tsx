@@ -40,7 +40,7 @@ export default function SignupPage() {
 
     // If confirmations are OFF, we have a session or need login
     setMsg("Account created! Redirecting…");
-    router.replace("/dashboard");
+    router.replace("/");
   };
 
   return (

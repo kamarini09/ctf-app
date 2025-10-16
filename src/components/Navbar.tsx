@@ -67,7 +67,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex h-14 items-center justify-between gap-3">
-          <Link href="/dashboard" className="text-lg font-extrabold tracking-tight text-violet-700" aria-label="Go to dashboard">
+          <Link href="/" className="text-lg font-extrabold tracking-tight text-violet-700" aria-label="Go to landpage">
             KvaliCTF
           </Link>
 
