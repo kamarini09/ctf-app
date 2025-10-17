@@ -1,10 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap");
 @import "tailwindcss";
 
-/* === Theme Variables === */
+/* === Theme Variables (Red CTF) === */
 :root {
-  /* Light theme (Kvalifik-inspired) */
-  --background: #f8f5f1; /* soft beige background */
-  --foreground: #171717;
+  --ctf-red: #ff5757;
+  --ctf-red-600: #ff4444;
+  --ctf-rose-50: #ffe5e5;
+  --background: #fafafa;
+  --foreground: #111827;
 }
 
 @theme inline {
@@ -18,7 +21,32 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Display font for headings that need the arcade look */
+.font-display {
+  font-family: "Fredoka One", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* subtle card shadow + hover lift, reused */
+.ctf-card {
+  @apply rounded-xl border border-[var(--ctf-red)]/30 bg-white shadow-sm transition;
+}
+.ctf-card-hover {
+  @apply hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ctf-red)];
+}
+
+/* little underline used in nav */
+.ctf-underline::after {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--ctf-red);
 }

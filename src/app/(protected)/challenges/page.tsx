@@ -35,7 +35,7 @@ export default function ChallengesPage() {
 
   const flagInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Require auth
+  // auth
   useEffect(() => {
     sb.auth.getUser().then(({ data }) => {
       const user = data.user;
@@ -47,7 +47,7 @@ export default function ChallengesPage() {
     });
   }, [router]);
 
-  // Load challenges
+  // load challenges
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -65,7 +65,7 @@ export default function ChallengesPage() {
     })();
   }, []);
 
-  // Load solved challenges
+  // load solved
   useEffect(() => {
     if (!userId) return;
     (async () => {
@@ -73,26 +73,19 @@ export default function ChallengesPage() {
         const res = await fetch(`/api/me/solves?userId=${userId}`);
         const ids: string[] = await res.json();
         setSolved(new Set(ids));
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
   }, [userId]);
 
-  // Close modal on ESC
+  // modal helpers
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeModal();
-    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
     if (modalOpen) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [modalOpen]);
 
-  // Auto-focus input
   useEffect(() => {
-    if (modalOpen && selected && flagInputRef.current) {
-      flagInputRef.current.focus();
-    }
+    if (modalOpen && selected && flagInputRef.current) flagInputRef.current.focus();
   }, [modalOpen, selected]);
 
   const openModal = async (id: string) => {
@@ -100,7 +93,6 @@ export default function ChallengesPage() {
     setModalOpen(true);
     setFlag("");
     setNotice(null);
-
     try {
       const res = await fetch(`/api/challenges/${id}`);
       if (!res.ok) throw new Error("Not found");
@@ -148,13 +140,11 @@ export default function ChallengesPage() {
   const handleSubmitFlag = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected?.id || !userId) return;
-
     const trimmed = flag.trim();
     if (!FLAG_RE.test(trimmed)) {
       setNotice("Invalid flag format. Use CTF{ANSWER}.");
       return;
     }
-
     setSubmitting(true);
     setNotice(null);
     try {
@@ -163,20 +153,14 @@ export default function ChallengesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, challengeId: selected.id, flag: trimmed }),
       });
-
       const ct = res.headers.get("content-type") || "";
       const raw = await res.text();
       const json = ct.includes("application/json") ? JSON.parse(raw) : { ok: false, message: raw.slice(0, 200) };
-
       if (!res.ok) throw new Error(json.error || json.message || "Submit failed");
 
       if (json.correct) {
         setNotice(json.alreadySolved ? "✅ Correct — but your team already solved this." : `✅ Correct! +${json.points} pts`);
-        setSolved((prev) => {
-          const next = new Set(prev);
-          next.add(selected!.id);
-          return next;
-        });
+        setSolved((prev) => new Set(prev).add(selected!.id));
       } else {
         setNotice("❌ Not correct. Keep trying!");
       }
@@ -188,58 +172,67 @@ export default function ChallengesPage() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Challenges</h1>
-      </div>
+    <main className="mx-auto max-w-3xl p-6">
+      {/* Paper card wrapper to feel like a printed bingo sheet */}
+      <div
+        className="
+    relative mx-auto w-full max-w-3xl 
+      border-2 border-[#efe7df] bg-[#fffdf8]
+      p-8 md:p-12 shadow-[0_12px_30px_rgba(0,0,0,0.08)]
+    "
+        style={{
+          backgroundImage: "radial-gradient(rgba(0,0,0,0.035) 0.6px, transparent 0.6px)",
+          backgroundSize: "10px 10px",
+        }}
+      >
+        <h1 className="mb-6 text-center text-4xl font-black tracking-tight text-[var(--ctf-red)] font-display">Challenges</h1>
 
-      {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
+        {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
 
-      {/* Loading / Empty / List */}
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="animate-pulse space-y-3">
-                <div className="h-5 w-2/3 rounded bg-gray-200" />
-                <div className="h-4 w-1/3 rounded bg-gray-200" />
-                <div className="h-3 w-full rounded bg-gray-200" />
+        {/* GRID inside the paper */}
+        {loading ? (
+          <div className="grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="aspect-square rounded-none border-2 border-[var(--ctf-red)]/30 bg-white p-3">
+                <div className="h-full w-full animate-pulse rounded-none bg-gray-100" />
               </div>
-            </div>
-          ))}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-gray-600 shadow-sm">No challenges yet. Check back soon.</div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((c) => {
-            const isSolved = solved.has(c.id);
-            return (
-              <button key={c.id} onClick={() => openModal(c.id)} className={["group rounded-2xl border p-4 text-left shadow-sm transition", "hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-violet-500", isSolved ? "border-violet-200 bg-violet-50" : "border-gray-200 bg-white"].join(" ")}>
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900 group-hover:underline">{c.title}</h2>
-                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-200">{c.points} pts</span>
-                </div>
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-gray-600 shadow-sm">No challenges yet. Check back soon.</div>
+        ) : (
+          <div className="grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {items.map((c) => {
+              const isSolved = solved.has(c.id);
+              return (
+                <button key={c.id} onClick={() => openModal(c.id)} className={["group relative block aspect-square transition-transform", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ctf-red)]", isSolved ? "border-0" : "bg-white border-1 border-[var(--ctf-red)]", "rounded-none"].join(" ")} style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                  {/* solved: solid red gradient */}
+                  {isSolved && <div className="absolute inset-0 rounded-none bg-gradient-to-br from-[#ff6b6b] to-[var(--ctf-red)] shadow-lg" />}
 
-                <p className="mt-2 line-clamp-2 text-sm text-gray-600">Click to view details and submit a flag.</p>
+                  {/* very subtle lift for unsolved (keeps print vibe tight) */}
+                  {!isSolved && <div className="absolute inset-0 rounded-none shadow-[0_6px_14px_rgba(255,87,87,0.06)] transition-transform group-hover:-translate-y-0.5" />}
 
-                {isSolved && (
-                  <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-inset ring-violet-200">
-                    <span aria-hidden>✓</span> Solved
+                  {/* double border (tiny gap) */}
+                  {!isSolved && <div className="pointer-events-none absolute inset-[2px] rounded-none border-1 border-[var(--ctf-red)]" />}
+
+                  {/* content */}
+                  <div className={["relative z-10 grid h-full w-full place-items-center px-3 text-center", isSolved ? "text-white" : "text-[var(--ctf-red)]"].join(" ")}>
+                    <span className="text-sm font-semibold leading-tight">{c.title}</span>
+
+                    {/* points — plain text, no rounded background */}
+                    <span className={["absolute right-2 top-2 text-xs font-semibold tracking-wide", isSolved ? "text-white/90" : "text-[var(--ctf-red)]"].join(" ")}>{c.points} pts</span>
                   </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" onClick={closeModal}>
           <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            {/* Removed purple top bar */}
-
             <div className="p-6">
               {!selected ? (
                 <div className="animate-pulse space-y-3">
@@ -251,10 +244,10 @@ export default function ChallengesPage() {
                 <>
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">{selected.title}</h3>
-                      <p className="text-sm text-gray-600">{selected.points} pts</p>
+                      <h3 className="font-display text-2xl font-black text-[var(--ctf-red)]">{selected.title}</h3>
+                      <p className="mt-0.5 text-sm text-gray-600">{selected.points} pts</p>
                     </div>
-                    <button onClick={closeModal} className="rounded-lg border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50">
+                    <button onClick={closeModal} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50">
                       Close
                     </button>
                   </div>
@@ -263,26 +256,26 @@ export default function ChallengesPage() {
 
                   <div className="mt-4 flex flex-wrap gap-3">
                     {selected.link_url && (
-                      <a className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700" href={selected.link_url} target="_blank" rel="noreferrer">
+                      <a className="rounded-lg bg-[var(--ctf-red)] px-3 py-2 text-sm font-semibold text-white hover:bg-[#ff4444]" href={selected.link_url} target="_blank" rel="noreferrer">
                         Open link
                       </a>
                     )}
 
                     {selected.attachment_url && (
-                      <button className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:opacity-60" onClick={handleDownload} disabled={downloadLoading}>
+                      <button className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 disabled:opacity-60" onClick={handleDownload} disabled={downloadLoading}>
                         {downloadLoading ? "Preparing…" : "Download attachment"}
                       </button>
                     )}
                   </div>
 
                   <form className="mt-6 flex gap-2" onSubmit={handleSubmitFlag}>
-                    <input ref={flagInputRef} type="text" placeholder="CTF{ANSWER}" className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm outline-none ring-violet-500 focus:border-violet-500 focus:ring-2" value={flag} onChange={(e) => setFlag(e.target.value)} required />
-                    <button className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60" disabled={submitting}>
+                    <input ref={flagInputRef} type="text" placeholder="CTF{ANSWER}" className="flex-1 rounded-lg border-2 border-[var(--ctf-red)]/30 bg-white px-3 py-2 text-gray-900 shadow-sm outline-none focus:border-[var(--ctf-red)] focus:ring-2 focus:ring-[var(--ctf-red)]/40" value={flag} onChange={(e) => setFlag(e.target.value)} required />
+                    <button className="rounded-lg bg-[var(--ctf-red)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ff4444] disabled:opacity-60" disabled={submitting}>
                       {submitting ? "Submitting…" : "Submit"}
                     </button>
                   </form>
 
-                  <p className="mt-3 text-sm text-gray-700">{notice}</p>
+                  {notice && <p className="mt-3 text-sm text-gray-800">{notice}</p>}
                 </>
               )}
             </div>
