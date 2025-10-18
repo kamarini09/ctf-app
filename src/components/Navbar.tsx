@@ -19,6 +19,7 @@ export default function Navbar() {
       return;
     }
     const { data: prof } = await sb.from("profiles").select("display_name").eq("id", user.id).single();
+
     setLabel(prof?.display_name ?? user.email ?? null);
   };
 
@@ -28,6 +29,7 @@ export default function Navbar() {
       const { data } = await sb.auth.getSession();
       await setFromSession(data.session);
       setAuthLoaded(true);
+
       const { data: listener } = sb.auth.onAuthStateChange((_event, session) => setFromSession(session));
       unsub = () => listener.subscription.unsubscribe();
     })();
@@ -37,9 +39,16 @@ export default function Navbar() {
   const initial = useMemo(() => (label ? (label.trim()[0] || "U").toUpperCase() : null), [label]);
 
   const logout = async () => {
-    setLabel(null);
-    await sb.auth.signOut();
-    router.replace("/login");
+    // Where to send them back *after* they log in again
+    const authPages = new Set(["/login", "/signup"]);
+    const next = pathname && !authPages.has(pathname) ? `?next=${encodeURIComponent(pathname)}` : "";
+
+    try {
+      await sb.auth.signOut();
+    } finally {
+      // Hard redirect avoids “staying” on the same page due to router/auth races
+      window.location.href = `/login${next}`;
+    }
   };
 
   const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
@@ -60,7 +69,7 @@ export default function Navbar() {
             KraliCTF
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden items-center gap-1 md:flex">
             <NavLink href="/rules">Rules</NavLink>
             <NavLink href="/challenges">Challenges</NavLink>
             <NavLink href="/teams">Teams</NavLink>
@@ -70,15 +79,15 @@ export default function Navbar() {
           <div className="flex items-center gap-2">
             {!authLoaded ? (
               <>
-                <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
-                <div className="h-8 w-20 rounded-md bg-gray-200 animate-pulse" />
+                <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
+                <div className="h-8 w-20 animate-pulse rounded-md bg-gray-200" />
               </>
             ) : label ? (
               <>
-                <div className="hidden sm:grid h-8 w-8 place-items-center rounded-full bg-[var(--ctf-red)] text-white font-semibold shadow-sm ring-2 ring-[var(--ctf-rose-50)]" title={label} aria-label={label}>
+                <div className="hidden h-8 w-8 place-items-center rounded-full bg-[var(--ctf-red)] font-semibold text-white shadow-sm ring-2 ring-[var(--ctf-rose-50)] sm:grid" title={label} aria-label={label}>
                   {initial}
                 </div>
-                <button onClick={logout} className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-200">
+                <button onClick={logout} className="bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-200">
                   Log out
                 </button>
               </>
@@ -87,7 +96,7 @@ export default function Navbar() {
                 <Link href="/login" className="text-sm text-gray-700 hover:underline">
                   Log in
                 </Link>
-                <Link href="/signup" className="rounded-lg bg-[var(--ctf-red)] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[var(--ctf-red-600)]">
+                <Link href="/signup" className="bg-[var(--ctf-red)] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[var(--ctf-red-600)]">
                   Sign up
                 </Link>
               </>

@@ -229,50 +229,77 @@ export default function ChallengesPage() {
         )}
       </div>
 
-      {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" onClick={closeModal}>
-          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
+          {/* Outer double coral border, square edges */}
+          <div className="w-full max-w-2xl border-2 border-[#FF5757] bg-white p-1" onClick={(e) => e.stopPropagation()}>
+            <div className="border-2 border-[#FF5757] bg-white p-6">
+              {/* Header row */}
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif", fontSize: "1.35rem" }}>
+                    {selected?.title ?? "Loading…"}
+                  </h3>
+
+                  {/* meta: points • category • solved */}
+                  {selected && (
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                      <span className="text-[#FF5757] font-semibold">{selected.points} pts</span>
+
+                      {/* Optional category badge if your API returns it */}
+                      {"category" in (selected as any) && (selected as any).category && <span className="border-2 border-[#FF5757] px-2 py-0.5 text-[#FF5757]">{(selected as any).category}</span>}
+
+                      {solved.has(selected.id) && (
+                        <span className="inline-flex items-center gap-1 text-[#FF5757]">
+                          <svg width="16" height="16" viewBox="0 0 24 24" className="-mt-[2px]">
+                            <path d="M20 6L9 17l-5-5" stroke="#FF5757" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Solved
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Close (X) */}
+                <button onClick={closeModal} aria-label="Close" className="text-[#FF5757] hover:opacity-80" title="Close">
+                  ×
+                </button>
+              </div>
+
+              {/* Description */}
               {!selected ? (
                 <div className="animate-pulse space-y-3">
-                  <div className="h-6 w-1/3 rounded bg-gray-200" />
-                  <div className="h-4 w-1/2 rounded bg-gray-200" />
-                  <div className="h-24 w-full rounded bg-gray-200" />
+                  <div className="h-4 w-1/2 bg-gray-200" />
+                  <div className="h-24 w-full bg-gray-200" />
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-display text-2xl font-black text-[var(--ctf-red)]">{selected.title}</h3>
-                      <p className="mt-0.5 text-sm text-gray-600">{selected.points} pts</p>
-                    </div>
-                    <button onClick={closeModal} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50">
-                      Close
-                    </button>
-                  </div>
+                  <p className="text-[15px] leading-relaxed text-gray-800">{selected.description}</p>
 
-                  <pre className="mt-4 whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-800 ring-1 ring-inset ring-gray-200">{selected.description}</pre>
-
+                  {/* Links / Attachments (outlined, square) */}
                   <div className="mt-4 flex flex-wrap gap-3">
                     {selected.link_url && (
-                      <a className="rounded-lg bg-[var(--ctf-red)] px-3 py-2 text-sm font-semibold text-white hover:bg-[#ff4444]" href={selected.link_url} target="_blank" rel="noreferrer">
+                      <a href={selected.link_url} target="_blank" rel="noreferrer" className="border-2 border-[#FF5757] px-3 py-2 text-[#FF5757] hover:bg-[#FF5757]/5">
                         Open link
                       </a>
                     )}
-
                     {selected.attachment_url && (
-                      <button className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50 disabled:opacity-60" onClick={handleDownload} disabled={downloadLoading}>
+                      <button onClick={handleDownload} disabled={downloadLoading} className="border-2 border-[#FF5757] px-3 py-2 text-[#FF5757] hover:bg-[#FF5757]/5 disabled:opacity-60">
                         {downloadLoading ? "Preparing…" : "Download attachment"}
                       </button>
                     )}
                   </div>
 
-                  <form className="mt-6 flex gap-2" onSubmit={handleSubmitFlag}>
-                    <input ref={flagInputRef} type="text" placeholder="CTF{ANSWER}" className="flex-1 rounded-lg border-2 border-[var(--ctf-red)]/30 bg-white px-3 py-2 text-gray-900 shadow-sm outline-none focus:border-[var(--ctf-red)] focus:ring-2 focus:ring-[var(--ctf-red)]/40" value={flag} onChange={(e) => setFlag(e.target.value)} required />
-                    <button className="rounded-lg bg-[var(--ctf-red)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ff4444] disabled:opacity-60" disabled={submitting}>
-                      {submitting ? "Submitting…" : "Submit"}
-                    </button>
+                  {/* Submit Flag */}
+                  <form className="mt-6 space-y-2" onSubmit={handleSubmitFlag}>
+                    <label className="block text-sm font-medium text-[#FF5757]">Submit Flag</label>
+                    <div className="flex gap-2">
+                      <input ref={flagInputRef} type="text" placeholder="CTF{ANSWER}" className="flex-1 border-2 border-[#FF5757] px-3 py-2 outline-none focus:border-[#FF5757]" value={flag} onChange={(e) => setFlag(e.target.value)} required />
+                      <button className="bg-[#FF5757] px-4 py-2 font-semibold text-white hover:bg-[#FF4444] disabled:opacity-60" disabled={submitting}>
+                        {submitting ? "Submitting…" : "Submit"}
+                      </button>
+                    </div>
                   </form>
 
                   {notice && <p className="mt-3 text-sm text-gray-800">{notice}</p>}

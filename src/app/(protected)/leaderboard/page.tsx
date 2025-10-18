@@ -11,17 +11,21 @@ type TeamRow = {
   members: { id: string; display_name: string }[];
 };
 
-/**
- * Leaderboard – Signature Purple, Bigger Card, Simple Table
- * - Full-page subtle purple background
- * - Single large violet card for the teams table
- * - No podium/top-3
- * - Progress bar fixed & labeled (value / max)
- */
 export default function LeaderboardPage() {
   const router = useRouter();
   const [rows, setRows] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Load Fredoka One (client-only)
+  useEffect(() => {
+    const href = "https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap";
+    if (!document.querySelector(`link[href="${href}"]`)) {
+      const link = document.createElement("link");
+      link.href = href;
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+    }
+  }, []);
 
   useEffect(() => {
     sb.auth.getUser().then(({ data }) => {
@@ -44,7 +48,6 @@ export default function LeaderboardPage() {
   useEffect(() => {
     (async () => {
       try {
-        // Your /api/challenges returns an array of { id, title, points }
         const res = await fetch("/api/challenges");
         if (!res.ok) return;
         const data = await res.json();
@@ -54,124 +57,126 @@ export default function LeaderboardPage() {
     })();
   }, []);
   const maxScore = useMemo(() => {
-    // Prefer total challenge points; fallback to current leader
     const leader = Math.max(0, ...sorted.map((r) => r.score));
     const base = totalPoints ?? leader;
     return base === 0 ? 1 : base;
   }, [sorted, totalPoints]);
 
   return (
-    <main className="min-h-[90vh] bg-[radial-gradient(1200px_600px_at_20%_-10%,_rgba(139,92,246,0.12),_transparent),radial-gradient(900px_500px_at_100%_10%,_rgba(139,92,246,0.10),_transparent)]">
-      <div className="mx-auto max-w-6xl p-6">
-        <header className="mb-5">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Team Leaderboard</h1>
-          <p className="mt-1 text-sm text-gray-600">Points update as flags are submitted.</p>
-        </header>
+    <div className="min-h-screen bg-gray-50">
+      <main className="mx-auto max-w-5xl px-6 py-12">
+        <h1 className="mb-2 text-center text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+          Leaderboard
+        </h1>
+        <p className="mb-8 text-center text-[#FF5757]/80">Points update as flags are submitted.</p>
 
-        {/* Big signature-purple card */}
-        <section className="overflow-hidden rounded-3xl bg-violet-600 text-white shadow-xl ring-1 ring-violet-500/50">
-          {/* top shine */}
-          <div className="h-1 w-full bg-gradient-to-r from-white/30 via-white/60 to-white/30" />
+        {/* Card with double coral border */}
+        <section className="border-2 border-[#FF5757] bg-white p-1">
+          <div className="border-2 border-[#FF5757] bg-white">
+            {/* Header row */}
+            <div className="grid grid-cols-12 gap-4 border-b-2 border-[#FF5757] bg-[#FF5757] px-6 py-3">
+              <div className="col-span-1 text-xs uppercase text-white" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                #
+              </div>
+              <div className="col-span-6 text-xs uppercase text-white" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                Team
+              </div>
+              <div className="col-span-3 text-xs uppercase text-white" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                Progress
+              </div>
+              <div className="col-span-2 text-right text-xs uppercase text-white" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                Score
+              </div>
+            </div>
 
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-base">
-              {/* bigger text */}
-              <thead className="bg-white/10">
-                <tr className="text-left uppercase text-[11px] tracking-widest text-violet-100">
-                  <th className="px-5 py-4 w-14">#</th>
-                  <th className="px-5 py-4 min-w-[260px]">Team</th>
-                  <th className="px-5 py-4">Progress</th>
-                  <th className="px-5 py-4 text-right w-28">Score</th>
-                </tr>
-              </thead>
+            {/* Body */}
+            <div>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-4 border-b-2 border-[#FF5757] px-6 py-4">
+                    <div className="col-span-1 flex items-center">
+                      <div className="h-4 w-6 animate-pulse rounded bg-[#FF5757]/20" />
+                    </div>
+                    <div className="col-span-6">
+                      <div className="h-5 w-48 animate-pulse rounded bg-[#FF5757]/20" />
+                      <div className="mt-2 flex gap-2">
+                        <div className="h-6 w-24 animate-pulse rounded-full bg-[#FF5757]/20" />
+                        <div className="h-6 w-16 animate-pulse rounded-full bg-[#FF5757]/20" />
+                      </div>
+                    </div>
+                    <div className="col-span-3 flex items-center">
+                      <div className="h-6 w-full animate-pulse rounded bg-[#FF5757]/15" />
+                    </div>
+                    <div className="col-span-2 flex items-center justify-end">
+                      <div className="h-5 w-12 animate-pulse rounded bg-[#FF5757]/20" />
+                    </div>
+                  </div>
+                ))
+              ) : sorted.length === 0 ? (
+                <div className="px-6 py-10 text-center text-[#FF5757]/80">No teams yet — be the first to create one ✨</div>
+              ) : (
+                sorted.map((r, i) => (
+                  <div key={r.id} className="grid grid-cols-12 gap-4 border-b-2 border-[#FF5757] px-6 py-4 last:border-b-0">
+                    {/* rank */}
+                    <div className="col-span-1 flex items-center">
+                      <span className="text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                        {i + 1}
+                      </span>
+                    </div>
 
-              <tbody className="divide-y divide-white/10">
-                {loading ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i} aria-busy="true" className="animate-pulse">
-                      <td className="px-5 py-5">
-                        <div className="h-4 w-6 rounded bg-white/20" />
-                      </td>
-                      <td className="px-5 py-5">
-                        <div className="h-5 w-48 rounded bg-white/20" />
-                        <div className="mt-2 flex gap-2">
-                          <div className="h-6 w-24 rounded-full bg-white/20" />
-                          <div className="h-6 w-16 rounded-full bg-white/20" />
-                        </div>
-                      </td>
-                      <td className="px-5 py-5">
-                        <div className="h-2 w-full rounded bg-white/15" />
-                      </td>
-                      <td className="px-5 py-5 text-right">
-                        <div className="ml-auto h-5 w-12 rounded bg-white/20" />
-                      </td>
-                    </tr>
-                  ))
-                ) : sorted.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-10 text-center text-violet-100">
-                      No teams yet — be the first to create one ✨
-                    </td>
-                  </tr>
-                ) : (
-                  sorted.map((r, i) => (
-                    <tr key={r.id} className="align-middle transition-colors hover:bg-white/5">
-                      <td className="px-5 py-5">
-                        <PurpleRank rank={i + 1} />
-                      </td>
-                      <td className="px-5 py-5">
-                        <div className="font-semibold drop-shadow-sm">{r.name}</div>
-                        {r.members.length ? (
-                          <ul className="mt-1 flex flex-wrap gap-1.5">
-                            {r.members.map((m) => (
-                              <li key={m.id} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[12px] text-violet-50" title={m.display_name}>
-                                {m.display_name}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <div className="mt-1 text-xs text-violet-100/80">No members yet</div>
-                        )}
-                      </td>
-                      <td className="px-5 py-5">
-                        <ProgressBar value={r.score} max={maxScore} />
-                        <div className="mt-1 text-[11px] text-violet-100/80">
-                          {r.score} / {maxScore} {totalPoints ? "total" : "max"} pts
-                        </div>
-                      </td>
-                      <td className="px-5 py-5 text-right">
-                        <span className="inline-flex items-center justify-end rounded-md bg-white/15 px-3 py-1 text-base font-semibold text-white ring-1 ring-inset ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">{r.score}</span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                    {/* team + members UNDER the name */}
+                    <div className="col-span-6">
+                      <div className="text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                        {r.name}
+                      </div>
+                      {r.members.length ? (
+                        <ul className="mt-2 flex flex-wrap gap-1.5">
+                          {r.members.map((m) => (
+                            <li key={m.id} className="rounded border-2 border-[#FF5757] bg-[#FF5757] px-2 py-1 text-xs text-white" title={m.display_name} style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                              {m.display_name}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="mt-2 text-xs text-[#FF5757]/70">No members yet</div>
+                      )}
+                    </div>
+
+                    {/* progress (coral, not green) */}
+                    <div className="col-span-3 flex items-center">
+                      <ProgressBar value={r.score} max={maxScore} />
+                    </div>
+
+                    {/* score */}
+                    <div className="col-span-2 flex items-center justify-end">
+                      <span className="text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+                        {r.score.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-
-          {/* footer note */}
-          {!loading && sorted.length > 0 && <div className="bg-white/10 px-5 py-3 text-xs text-violet-100">Ties are shown by rank order but share the same score.</div>}
         </section>
-      </div>
-    </main>
+
+        {!loading && sorted.length > 0 && <p className="mt-6 text-center text-sm text-[#FF5757]/80">Ties are shown by rank order but share the same score.</p>}
+      </main>
+    </div>
   );
 }
 
-function PurpleRank({ rank }: { rank: number }) {
-  const base = "inline-grid h-8 w-8 place-items-center rounded-full font-bold";
-  if (rank === 1) return <span className={`${base} bg-amber-300 text-gray-900`}>1</span>;
-  if (rank === 2) return <span className={`${base} bg-gray-300 text-gray-900`}>2</span>;
-  if (rank === 3) return <span className={`${base} bg-orange-300 text-gray-900`}>3</span>;
-  return <span className={`${base} bg-white/15 text-white ring-1 ring-inset ring-white/20`}>{rank}</span>;
-}
-
 function ProgressBar({ value, max }: { value: number; max: number }) {
-  // Clamp and avoid NaN/Infinity
-  const pct = Number.isFinite(value) && Number.isFinite(max) && max > 0 ? Math.round((value / max) * 100) : 0;
-  const safePct = Math.max(0, Math.min(100, pct));
+  const pct = Number.isFinite(value) && Number.isFinite(max) && max > 0 ? Math.max(0, Math.min(100, Math.round((value / max) * 100))) : 0;
+
   return (
-    <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/15" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}>
-      <div className="h-full w-0 rounded-full bg-gradient-to-r from-violet-200 via-white to-violet-50 shadow-[0_0_12px_rgba(255,255,255,0.35)] transition-[width] duration-700" style={{ width: safePct + "%" }} />
+    <div className="relative h-6 w-full overflow-hidden border-2 border-[#FF5757] bg-gray-100" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}>
+      <div className="h-full bg-[#FF5757] transition-[width] duration-500" style={{ width: pct + "%" }} />
+      <div className="absolute inset-0 flex items-center justify-center text-xs">
+        <span className="relative z-10 text-white mix-blend-difference" style={{ fontFamily: "Fredoka One, sans-serif" }}>
+          {value} / {max}
+        </span>
+      </div>
     </div>
   );
 }
