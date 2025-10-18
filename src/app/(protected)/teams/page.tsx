@@ -28,17 +28,6 @@ export default function TeamsPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  // Load Google Font (Fredoka One) on the client
-  useEffect(() => {
-    const href = "https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap";
-    if (!document.querySelector(`link[href="${href}"]`)) {
-      const fontLink = document.createElement("link");
-      fontLink.href = href;
-      fontLink.rel = "stylesheet";
-      document.head.appendChild(fontLink);
-    }
-  }, []);
-
   useEffect(() => {
     sb.auth.getUser().then(async ({ data }) => {
       const user = data.user;
@@ -144,38 +133,31 @@ export default function TeamsPage() {
   if (loading) return <main className="mx-auto max-w-3xl p-6">Loading…</main>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-6xl px-6 py-12">
         {/* Title */}
-        <h1 className="mb-8 text-center text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif", fontSize: "1.75rem" }}>
-          Teams
-        </h1>
+        <h1 className="font-display mb-8 text-center text-3xl text-brand">Teams</h1>
 
         {/* Grid layout */}
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* LEFT: Your Team — solid coral card with white text */}
-          <div className="border-2 border-[#FF5757] bg-[#FF5757] p-1">
-            <div className="flex h-full flex-col border-2 border-[#FF5757] bg-[#FF5757] p-6">
-              <h2 className="mb-4 text-white" style={{ fontFamily: "Fredoka One, sans-serif", fontSize: "1.25rem" }}>
-                Your Team
-              </h2>
+          <div className="double-border bg-[var(--ctf-red)]">
+            <div className="inner bg-[var(--ctf-red)] p-6 text-white">
+              <h2 className="font-display mb-4 text-xl">Your Team</h2>
 
               {team ? (
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <div className="mb-1 block text-xs uppercase text-white/80">Team Name</div>
-                      <div className="text-lg text-white" style={{ fontFamily: "Fredoka One, sans-serif" }}>
-                        {team.name}
-                      </div>
+                      <div className="font-display text-lg">{team.name}</div>
                     </div>
                     <div>
                       <div className="mb-1 block text-xs uppercase text-white/80">Join Code</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg text-white" style={{ fontFamily: "Fredoka One, sans-serif" }}>
-                          {team.code}
-                        </span>
-                        <button onClick={() => copyCode(team.code)} className="rounded-md border border-white bg-transparent px-3 py-1 text-sm text-white hover:bg-white/10">
+                        <span className="font-display text-lg">{team.code}</span>
+                        {/* FIXED: visible on coral background */}
+                        <button onClick={() => copyCode(team.code)} className="btn btn-ghost btn-sm border border-white text-white hover:bg-white/10 focus-ring" aria-label="Copy join code">
                           Copy
                         </button>
                       </div>
@@ -189,7 +171,7 @@ export default function TeamsPage() {
                     {loadingMembers ? (
                       <ul className="mt-1 flex flex-wrap gap-2">
                         {Array.from({ length: 5 }).map((_, i) => (
-                          <li key={i} className="h-6 w-24 animate-pulse rounded-full bg-white/20" />
+                          <li key={i} className="h-6 w-24 animate-pulse bg-white/20" />
                         ))}
                       </ul>
                     ) : members.length === 0 ? (
@@ -197,7 +179,7 @@ export default function TeamsPage() {
                     ) : (
                       <ul className="mt-1 flex flex-wrap gap-2">
                         {members.map((m) => (
-                          <li key={m.id} className="rounded-full border border-white/50 bg-white/10 px-3 py-1 text-xs text-white" title={m.display_name || "Member"}>
+                          <li key={m.id} className="badge border-white bg-white/10 text-white" title={m.display_name || "Member"}>
                             {m.display_name || "Unnamed"}
                           </li>
                         ))}
@@ -211,31 +193,29 @@ export default function TeamsPage() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Create + Join (white cards with double coral border) */}
+          {/* RIGHT COLUMN: Create + Join */}
           <div className="flex flex-col gap-6">
             {/* CREATE */}
-            <form onSubmit={handleCreate} className="border-2 border-[#FF5757] bg-white p-1">
-              <div className="border-2 border-[#FF5757] bg-white p-6">
-                <h3 className="mb-4 text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif", fontSize: "1.1rem" }}>
-                  Create a team
-                </h3>
+            <form onSubmit={handleCreate} className="double-border">
+              <div className="inner p-6">
+                <h3 className="font-display mb-4 text-[var(--ctf-red)] text-lg">Create a team</h3>
 
                 <label className="mb-3 block">
                   <span className="mb-2 block text-sm">Team name</span>
-                  <input className="w-full rounded-md border-2 border-gray-300 px-3 py-2 outline-none focus:border-[#FF5757]" placeholder="e.g. Curious Koalas" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <input className="input" placeholder="e.g. Curious Koalas" value={name} onChange={(e) => setName(e.target.value)} required />
                 </label>
 
-                <button className="w-full rounded-md bg-[#FF5757] px-4 py-2 font-medium text-white transition hover:bg-[#FF4444] disabled:opacity-60" disabled={submittingCreate}>
+                <button className="btn btn-solid w-full disabled:opacity-60 focus-ring" disabled={submittingCreate}>
                   {submittingCreate ? "Creating…" : "Create team"}
                 </button>
 
                 {createErr && (
-                  <p role="alert" className="mt-3 rounded-md bg-red-100 px-3 py-2 text-sm text-red-700">
+                  <p role="alert" className="mt-3 border-2 border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {createErr}
                   </p>
                 )}
                 {createMsg && (
-                  <p role="status" className="mt-3 rounded-md border border-[#FF5757] bg-white px-3 py-2 text-sm text-[#FF5757]">
+                  <p role="status" className="mt-3 border-2 border-[var(--ctf-red)] bg-white px-3 py-2 text-sm text-[var(--ctf-red)]">
                     {createMsg}
                   </p>
                 )}
@@ -243,28 +223,26 @@ export default function TeamsPage() {
             </form>
 
             {/* JOIN */}
-            <form onSubmit={handleJoin} className="border-2 border-[#FF5757] bg-white p-1">
-              <div className="border-2 border-[#FF5757] bg-white p-6">
-                <h3 className="mb-4 text-[#FF5757]" style={{ fontFamily: "Fredoka One, sans-serif", fontSize: "1.1rem" }}>
-                  Join with code
-                </h3>
+            <form onSubmit={handleJoin} className="double-border">
+              <div className="inner p-6">
+                <h3 className="font-display mb-4 text-[var(--ctf-red)] text-lg">Join with code</h3>
 
                 <label className="mb-3 block">
                   <span className="mb-2 block text-sm">Join code</span>
-                  <input className="w-full rounded-md border-2 border-gray-300 px-3 py-2 uppercase outline-none focus:border-[#FF5757]" placeholder="ABC123" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} required />
+                  <input className="input uppercase" placeholder="ABC123" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} required />
                 </label>
 
-                <button className="w-full rounded-md bg-[#FF5757] px-4 py-2 font-medium text-white transition hover:bg-[#FF4444] disabled:opacity-60" disabled={submittingJoin}>
+                <button className="btn btn-solid w-full disabled:opacity-60 focus-ring" disabled={submittingJoin}>
                   {submittingJoin ? "Joining…" : "Join team"}
                 </button>
 
                 {joinErr && (
-                  <p role="alert" className="mt-3 rounded-md bg-red-100 px-3 py-2 text-sm text-red-700">
+                  <p role="alert" className="mt-3 border-2 border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {joinErr}
                   </p>
                 )}
                 {joinMsg && (
-                  <p role="status" className="mt-3 rounded-md border border-[#FF5757] bg-white px-3 py-2 text-sm text-[#FF5757]">
+                  <p role="status" className="mt-3 border-2 border-[var(--ctf-red)] bg-white px-3 py-2 text-sm text-[var(--ctf-red)]">
                     {joinMsg}
                   </p>
                 )}

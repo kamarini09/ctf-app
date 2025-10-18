@@ -39,14 +39,12 @@ export default function Navbar() {
   const initial = useMemo(() => (label ? (label.trim()[0] || "U").toUpperCase() : null), [label]);
 
   const logout = async () => {
-    // Where to send them back *after* they log in again
     const authPages = new Set(["/login", "/signup"]);
     const next = pathname && !authPages.has(pathname) ? `?next=${encodeURIComponent(pathname)}` : "";
-
     try {
       await sb.auth.signOut();
     } finally {
-      // Hard redirect avoids “staying” on the same page due to router/auth races
+      // Hard redirect so you never “stay” on the same page after logout
       window.location.href = `/login${next}`;
     }
   };
@@ -54,9 +52,9 @@ export default function Navbar() {
   const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
     const active = pathname?.startsWith(href);
     return (
-      <Link href={href} aria-current={active ? "page" : undefined} className={["relative px-3 py-2 text-sm font-medium transition", active ? "text-[var(--ctf-red)]" : "text-gray-700 hover:text-[var(--ctf-red)]"].join(" ")}>
+      <Link href={href} aria-current={active ? "page" : undefined} className={["relative px-3 py-2 text-sm font-medium transition no-underline", active ? "text-[var(--ctf-red)]" : "text-gray-700 hover:text-[var(--ctf-red)]"].join(" ")}>
         {children}
-        {active && <span className="absolute left-1/2 -bottom-[2px] h-[2px] w-5/6 -translate-x-1/2 rounded-full bg-[var(--ctf-red)]" />}
+        {active && <span className="pointer-events-none absolute left-1/2 -bottom-[2px] h-[2px] w-5/6 -translate-x-1/2 bg-[var(--ctf-red)]" aria-hidden="true" />}
       </Link>
     );
   };
@@ -65,8 +63,8 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex h-14 items-center justify-between gap-3">
-          <Link href="/" className="font-display text-xl font-black tracking-tight text-[var(--ctf-red)]" aria-label="Go to landing page">
-            KraliCTF
+          <Link href="/" className="font-display text-xl font-black tracking-tight text-[var(--ctf-red)] no-underline" aria-label="Go to landing page">
+            KvaliCTF
           </Link>
 
           <div className="hidden items-center gap-1 md:flex">
@@ -93,10 +91,10 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link href="/login" className="text-sm text-gray-700 hover:underline">
+                <Link href="/login" className="text-sm text-gray-700 no-underline hover:text-[var(--ctf-red)]">
                   Log in
                 </Link>
-                <Link href="/signup" className="bg-[var(--ctf-red)] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[var(--ctf-red-600)]">
+                <Link href="/signup" className="no-underline bg-[var(--ctf-red)] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[var(--ctf-red-600)]">
                   Sign up
                 </Link>
               </>
