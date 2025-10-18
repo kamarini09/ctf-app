@@ -2,28 +2,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
 
 export default function LoginPage() {
   const router = useRouter();
-  const search = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // If already signed in, bounce to next or home
+  // If already signed in, go home
   useEffect(() => {
     (async () => {
       const { data } = await sb.auth.getSession();
       if (data.session?.user) {
-        const next = search.get("next") || "/";
-        router.replace(next);
+        router.replace("/"); // ⬅️ always home
       }
     })();
-  }, [router, search]);
+  }, [router]);
 
   const normalizeError = (message?: string) => {
     if (!message) return "Login failed. Please try again.";
@@ -43,8 +41,7 @@ export default function LoginPage() {
         setErr(normalizeError(error.message));
         return;
       }
-      const next = search.get("next") || "/";
-      router.replace(next);
+      router.replace("/"); // ⬅️ always home after login
     } catch (e: any) {
       setErr(normalizeError(e?.message));
     } finally {
@@ -54,10 +51,10 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto max-w-md px-6 py-16">
-      {/* Double-border, square edges */}
+      {/* Double-coral bordered box, square edges */}
       <section className="double-border">
         <div className="inner px-6 py-6">
-          <h1 className="font-display text-center text-2xl text-[var(--ctf-red)] mb-4">Log In</h1>
+          <h1 className="font-display mb-4 text-center text-brand">Log In</h1>
 
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div>
@@ -74,19 +71,19 @@ export default function LoginPage() {
               <input id="password" name="password" type="password" autoComplete="current-password" required className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" />
             </div>
 
-            <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-solid w-full focus-ring">
+            <button type="submit" disabled={loading} aria-busy={loading} className="btn btn-solid w-full disabled:opacity-60 focus-ring">
               {loading ? "Logging in…" : "Log in"}
             </button>
 
             {err && (
-              <p role="alert" className="mt-3 border-2 border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p role="alert" className="border-2 border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {err}
               </p>
             )}
 
             <p className="text-center text-sm">
               No account?{" "}
-              <a href="/signup" className="text-brand hover:opacity-80 focus-ring">
+              <a href="/signup" className="text-brand underline underline-offset-2 hover:opacity-80">
                 Sign up
               </a>
             </p>

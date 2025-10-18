@@ -1,10 +1,11 @@
+// app/challenges/page.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
 
-type ChallengeListItem = { id: string; title: string; points: number };
+type ChallengeListItem = { id: string; title: number | string; points: number };
 type ChallengeDetail = {
   id: string;
   title: string;
@@ -47,13 +48,13 @@ export default function ChallengesPage() {
     });
   }, [router]);
 
-  // load challenges
+  // load challenges (no-store)
   useEffect(() => {
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/challenges");
+        const res = await fetch("/api/challenges", { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to load challenges");
         const json = (await res.json()) as ChallengeListItem[];
         setItems(Array.isArray(json) ? json : []);
@@ -65,12 +66,12 @@ export default function ChallengesPage() {
     })();
   }, []);
 
-  // load solved
+  // load solved (no-store)
   useEffect(() => {
     if (!userId) return;
     (async () => {
       try {
-        const res = await fetch(`/api/me/solves?userId=${userId}`);
+        const res = await fetch(`/api/me/solves?userId=${userId}`, { cache: "no-store" });
         const ids: string[] = await res.json();
         setSolved(new Set(ids));
       } catch {}
@@ -94,7 +95,7 @@ export default function ChallengesPage() {
     setFlag("");
     setNotice(null);
     try {
-      const res = await fetch(`/api/challenges/${id}`);
+      const res = await fetch(`/api/challenges/${id}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Not found");
       const data = (await res.json()) as ChallengeDetail;
       setSelected(data);
@@ -137,6 +138,14 @@ export default function ChallengesPage() {
     }
   };
 
+  const refetchSolved = async (uid: string) => {
+    try {
+      const res = await fetch(`/api/me/solves?userId=${uid}`, { cache: "no-store" });
+      const ids: string[] = await res.json();
+      setSolved(new Set(ids));
+    } catch {}
+  };
+
   const handleSubmitFlag = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected?.id || !userId) return;
@@ -161,6 +170,7 @@ export default function ChallengesPage() {
       if (json.correct) {
         setNotice(json.alreadySolved ? "✅ Correct — but your team already solved this." : `✅ Correct! +${json.points} pts`);
         setSolved((prev) => new Set(prev).add(selected!.id));
+        await refetchSolved(userId); // keep UI honest
       } else {
         setNotice("❌ Not correct. Keep trying!");
       }
@@ -175,13 +185,16 @@ export default function ChallengesPage() {
     <main className="mx-auto max-w-3xl p-6">
       {/* Paper card wrapper */}
       <div className="paper">
-        <h1 className="font-display mb-6 text-center text-4xl tracking-tight text-brand">Challenges</h1>
+        {/* Title — shared across Rules & Challenges */}
+        <h1 className="font-display text-center text-brand" style={{ fontWeight: 900, letterSpacing: "-0.5px", fontSize: "clamp(32px, 6vw, 64px)" }}>
+          Challenges
+        </h1>
 
-        {error && <div className="mb-4 border-2 border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
+        {error && <div className="mb-4 mt-4 border-2 border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
 
         {/* GRID */}
         {loading ? (
-          <div className="grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-6 grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="aspect-square border-2 border-[color-mix(in_srgb,var(--ctf-red)30%,white)] bg-white p-3">
                 <div className="h-full w-full animate-pulse bg-gray-100" />
@@ -189,13 +202,13 @@ export default function ChallengesPage() {
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="border-2 border-[color-mix(in_srgb,var(--ctf-red)30%,white)] bg-white p-6 text-center text-gray-600">No challenges yet. Check back soon.</div>
+          <div className="mt-6 border-2 border-[color-mix(in_srgb,var(--ctf-red)30%,white)] bg-white p-6 text-center text-gray-600">No challenges yet. Check back soon.</div>
         ) : (
-          <div className="grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-6 grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {items.map((c) => {
-              const isSolved = solved.has(c.id);
+              const isSolved = solved.has(String(c.id));
               return (
-                <button key={c.id} onClick={() => openModal(c.id)} className={["group relative block aspect-square transition-transform focus-ring", "border-2", isSolved ? "border-transparent" : "border-[color-mix(in_srgb,var(--ctf-red)65%,white)] bg-white"].join(" ")}>
+                <button key={String(c.id)} onClick={() => openModal(String(c.id))} className={["group relative block aspect-square transition-transform focus-ring", "border-2", isSolved ? "border-transparent" : "border-[color-mix(in_srgb,var(--ctf-red)65%,white)] bg-white"].join(" ")}>
                   {/* solved: solid red gradient */}
                   {isSolved && (
                     <div
@@ -214,7 +227,7 @@ export default function ChallengesPage() {
 
                   {/* content */}
                   <div className={["relative z-10 grid h-full w-full place-items-center px-3 text-center", isSolved ? "text-white" : "text-brand"].join(" ")}>
-                    <span className="text-sm font-semibold leading-tight">{c.title}</span>
+                    <span className="text-sm font-semibold leading-tight">{String(c.title)}</span>
                     <span className={["absolute right-2 top-2 text-xs font-semibold tracking-wide", isSolved ? "text-white/90" : "text-brand"].join(" ")}>{c.points} pts</span>
                   </div>
                 </button>
@@ -241,7 +254,7 @@ export default function ChallengesPage() {
 
                       {"category" in (selected as any) && (selected as any).category && <span className="badge">{(selected as any).category}</span>}
 
-                      {solved.has(selected.id) && (
+                      {selected?.id && solved.has(selected.id) && (
                         <span className="inline-flex items-center gap-1 text-brand">
                           <svg width="16" height="16" viewBox="0 0 24 24" className="-mt-[2px]">
                             <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />

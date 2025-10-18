@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
 
@@ -9,91 +9,138 @@ type Member = { id: string; display_name: string | null };
 
 export default function TeamsPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+
+  const [authLoaded, setAuthLoaded] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+
+  const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<Team | null>(null);
 
   const [name, setName] = useState("");
   const [joinCode, setJoinCode] = useState("");
+
   const [submittingCreate, setSubmittingCreate] = useState(false);
   const [submittingJoin, setSubmittingJoin] = useState(false);
 
-  // per-card messages
   const [createErr, setCreateErr] = useState<string | null>(null);
   const [joinErr, setJoinErr] = useState<string | null>(null);
   const [createMsg, setCreateMsg] = useState<string | null>(null);
   const [joinMsg, setJoinMsg] = useState<string | null>(null);
 
-  // team members
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  useEffect(() => {
-    sb.auth.getUser().then(async ({ data }) => {
-      const user = data.user;
-      if (!user) {
-        router.replace("/login");
+  // --- helpers --------------------------------------------------------------
+
+  const loadTeamAndMembers = useCallback(async (uid: string) => {
+    setLoading(true);
+    try {
+      // get team id from profile
+      const { data: prof, error: pErr } = await sb.from("profiles").select("team_id").eq("id", uid).single();
+
+      if (pErr || !prof?.team_id) {
+        setTeam(null);
+        setMembers([]);
         return;
       }
-      setUserId(user.id);
 
-      const { data: prof } = await sb.from("profiles").select("team_id").eq("id", user.id).single();
+      // team
+      const { data: t } = await sb.from("teams").select("id, name, code").eq("id", prof.team_id).single();
 
-      if (prof?.team_id) {
-        const { data: t } = await sb.from("teams").select("id, name, code").eq("id", prof.team_id).single();
-        if (t) setTeam(t as Team);
-      }
+      setTeam((t as Team) ?? null);
+
+      // members
+      setLoadingMembers(true);
+      const { data: mems } = await sb.from("profiles").select("id, display_name").eq("team_id", prof.team_id).order("display_name", { ascending: true, nullsFirst: false });
+
+      setMembers(((mems || []) as Member[]).map((m) => ({ ...m, display_name: m.display_name ?? "Unnamed" })));
+    } finally {
+      setLoadingMembers(false);
       setLoading(false);
-    });
-  }, [router]);
-
-  // load members when we have a team
-  useEffect(() => {
-    if (!team?.id) {
-      setMembers([]);
-      return;
     }
-    setLoadingMembers(true);
-    sb.from("profiles")
-      .select("id, display_name")
-      .eq("team_id", team.id)
-      .order("display_name", { ascending: true, nullsFirst: false })
-      .then(({ data }) => {
-        setMembers((data || []) as Member[]);
-      })
-      .finally(() => setLoadingMembers(false));
-  }, [team?.id]);
+  }, []);
 
-  const hasTeam = Boolean(team);
+  // --- auth gate: wait for INITIAL_SESSION then act -------------------------
+
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+
+    (async () => {
+      // quick check (fast path)
+      const { data } = await sb.auth.getSession();
+      if (data.session?.user) {
+        setAuthLoaded(true);
+        setUserId(data.session.user.id);
+        await loadTeamAndMembers(data.session.user.id);
+      }
+
+      // definitive source of truth
+      const { data: listener } = sb.auth.onAuthStateChange(async (event, session) => {
+        if (event === "INITIAL_SESSION") {
+          setAuthLoaded(true);
+          const uid = session?.user?.id ?? null;
+          setUserId(uid);
+          if (uid) {
+            await loadTeamAndMembers(uid);
+          } else {
+            // only redirect once we know there is no session
+            router.replace("/login");
+          }
+          return;
+        }
+
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          const uid = session?.user?.id ?? null;
+          setUserId(uid);
+          if (uid) await loadTeamAndMembers(uid);
+        }
+
+        if (event === "SIGNED_OUT") {
+          setUserId(null);
+          setTeam(null);
+          setMembers([]);
+          router.replace("/login");
+        }
+      });
+
+      unsub = () => listener.subscription.unsubscribe();
+    })();
+
+    return () => unsub?.();
+  }, [router, loadTeamAndMembers]);
+
+  // --- actions --------------------------------------------------------------
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateErr(null);
     setCreateMsg(null);
 
-    if (hasTeam) {
-      setCreateErr("You have already created a team!");
-      return;
-    }
     if (!userId || submittingCreate) return;
 
     setSubmittingCreate(true);
-    const res = await fetch("/api/teams/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), userId }),
-    });
-    const json = await res.json();
+    try {
+      const res = await fetch("/api/teams/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), userId }),
+      });
+      const json = await res.json();
 
-    if (!res.ok) {
-      setCreateErr(json.error || "Failed to create team");
+      if (!res.ok) {
+        setCreateErr(json.error || "Failed to create team");
+        return;
+      }
+
+      setTeam(json.team);
+      setCreateMsg("Team created!");
+      setName("");
+
+      // refresh members for the new team
+      await loadTeamAndMembers(userId);
+    } finally {
       setSubmittingCreate(false);
-      return;
     }
-    setTeam(json.team);
-    setCreateMsg("Team created!");
-    setName("");
-    setSubmittingCreate(false);
   };
 
   const handleJoin = async (e: React.FormEvent) => {
@@ -103,22 +150,27 @@ export default function TeamsPage() {
     if (!userId || submittingJoin) return;
 
     setSubmittingJoin(true);
-    const res = await fetch("/api/teams/join", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ joinCode, userId }),
-    });
-    const json = await res.json();
+    try {
+      const res = await fetch("/api/teams/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ joinCode, userId }),
+      });
+      const json = await res.json();
 
-    if (!res.ok) {
-      setJoinErr(json.error || "Failed to join team");
+      if (!res.ok) {
+        setJoinErr(json.error || "Failed to join team");
+        return;
+      }
+
+      setTeam(json.team);
+      setJoinMsg("Joined team!");
+      setJoinCode("");
+
+      await loadTeamAndMembers(userId);
+    } finally {
       setSubmittingJoin(false);
-      return;
     }
-    setTeam(json.team);
-    setJoinMsg("Joined team!");
-    setJoinCode("");
-    setSubmittingJoin(false);
   };
 
   const copyCode = async (code: string) => {
@@ -130,17 +182,19 @@ export default function TeamsPage() {
     }
   };
 
-  if (loading) return <main className="mx-auto max-w-3xl p-6">Loading…</main>;
+  // --- render ---------------------------------------------------------------
+
+  if (!authLoaded || loading) {
+    return <main className="mx-auto max-w-3xl p-6">Loading…</main>;
+  }
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <main className="mx-auto max-w-6xl px-6 py-12">
-        {/* Title */}
         <h1 className="font-display mb-8 text-center text-3xl text-brand">Teams</h1>
 
-        {/* Grid layout */}
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* LEFT: Your Team — solid coral card with white text */}
+          {/* LEFT: Your Team */}
           <div className="double-border bg-[var(--ctf-red)]">
             <div className="inner bg-[var(--ctf-red)] p-6 text-white">
               <h2 className="font-display mb-4 text-xl">Your Team</h2>
@@ -156,7 +210,6 @@ export default function TeamsPage() {
                       <div className="mb-1 block text-xs uppercase text-white/80">Join Code</div>
                       <div className="flex items-center gap-2">
                         <span className="font-display text-lg">{team.code}</span>
-                        {/* FIXED: visible on coral background */}
                         <button onClick={() => copyCode(team.code)} className="btn btn-ghost btn-sm border border-white text-white hover:bg-white/10 focus-ring" aria-label="Copy join code">
                           Copy
                         </button>
@@ -179,7 +232,7 @@ export default function TeamsPage() {
                     ) : (
                       <ul className="mt-1 flex flex-wrap gap-2">
                         {members.map((m) => (
-                          <li key={m.id} className="badge border-white bg-white/10 text-white" title={m.display_name || "Member"}>
+                          <li key={m.id} className="badge border-white bg_white/10 text-white" title={m.display_name || "Member"}>
                             {m.display_name || "Unnamed"}
                           </li>
                         ))}
@@ -193,7 +246,7 @@ export default function TeamsPage() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Create + Join */}
+          {/* RIGHT: Create + Join */}
           <div className="flex flex-col gap-6">
             {/* CREATE */}
             <form onSubmit={handleCreate} className="double-border">

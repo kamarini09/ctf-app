@@ -1,10 +1,11 @@
+// app/rules/page.tsx
 "use client";
 
 export default function RulesPage() {
   return (
     <main className="px-6 py-10">
       <div className="paper mx-auto max-w-3xl md:p-10">
-        {/* Header */}
+        {/* Title — shared across Rules & Challenges */}
         <h1 className="font-display text-center text-brand" style={{ fontWeight: 900, letterSpacing: "-0.5px", fontSize: "clamp(32px, 6vw, 64px)" }}>
           KvaliCTF Rules
         </h1>
