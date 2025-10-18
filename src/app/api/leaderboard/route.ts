@@ -1,20 +1,38 @@
 import { NextResponse } from "next/server";
 import { sbAdmin } from "@/lib/supabase-server";
 
+// Disable caching for this route
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+const noStore = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+};
+
 export async function GET() {
   const sb = sbAdmin();
 
-  // All teams (so teams with 0 points still appear)
+  // All teams (teams with 0 points still appear)
   const { data: teams, error: teamErr } = await sb.from("teams").select("id, name");
-  if (teamErr) return NextResponse.json({ error: teamErr.message }, { status: 500 });
+
+  if (teamErr) {
+    return NextResponse.json({ error: teamErr.message }, { status: 500, headers: noStore });
+  }
 
   // Members by team — ONLY display_name (no email fallback)
   const { data: members, error: memErr } = await sb.from("profiles").select("id, display_name, team_id");
-  if (memErr) return NextResponse.json({ error: memErr.message }, { status: 500 });
+
+  if (memErr) {
+    return NextResponse.json({ error: memErr.message }, { status: 500, headers: noStore });
+  }
 
   // Solves with points
   const { data: solves, error: solErr } = await sb.from("submissions").select("team_id, challenges(points)");
-  if (solErr) return NextResponse.json({ error: solErr.message }, { status: 500 });
+
+  if (solErr) {
+    return NextResponse.json({ error: solErr.message }, { status: 500, headers: noStore });
+  }
 
   // Aggregate points per team
   const scores = new Map<string, number>();
@@ -45,5 +63,5 @@ export async function GET() {
     }))
     .sort((a, b) => b.score - a.score);
 
-  return NextResponse.json(out);
+  return NextResponse.json(out, { headers: noStore });
 }
