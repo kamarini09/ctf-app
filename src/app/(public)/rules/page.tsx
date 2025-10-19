@@ -20,7 +20,7 @@ export default function RulesPage() {
             <ul className="mt-3 list-disc space-y-1 pl-6 text-[15px] text-gray-800 marker:text-brand">
               <li>You must join or create a team before playing.</li>
               <li>Teams can have 1–3 people. Choose your teammates wisely!</li>
-              <li>Don’t share your answers with other teams (that’s no fun for anyone 😉).</li>
+              <li>Don’t share your answers with other teams and use as less AI as possible.</li>
             </ul>
           </div>
 
