@@ -35,7 +35,7 @@ export default function RulesPage() {
                 All flags follow this format: <code className="text-brand">KCTF&#123;your_flag_here&#125;</code>
               </li>
               <li>
-                Examples: <code className="text-brand">KCTF&#123;FLAG&#125;</code>, <code className="text-brand">KCTF&#123;my_name_is_2345&#125;</code>
+                Examples: <code className="text-brand">KCTF&#123;FLAG&#125;</code>, <code className="text-brand">KCTF&#123;This_is_the_first_flag&#125;</code>
               </li>
               <li>Flags are case-sensitive so copy them exactly as found!</li>
             </ul>
