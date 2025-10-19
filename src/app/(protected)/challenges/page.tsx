@@ -15,7 +15,7 @@ type ChallengeDetail = {
   link_url: string | null;
 };
 
-const FLAG_RE = /^CTF\{[A-Za-z0-9_]{1,80}\}$/;
+const FLAG_RE = /^KCTF\{[A-Za-z0-9_]{1,80}\}$/;
 
 export default function ChallengesPage() {
   const router = useRouter();
@@ -151,7 +151,7 @@ export default function ChallengesPage() {
     if (!selected?.id || !userId) return;
     const trimmed = flag.trim();
     if (!FLAG_RE.test(trimmed)) {
-      setNotice("Invalid flag format. Use CTF{ANSWER}.");
+      setNotice("Invalid flag format. Use KCTF{ANSWER}.");
       return;
     }
     setSubmitting(true);
@@ -300,7 +300,7 @@ export default function ChallengesPage() {
                   <form className="mt-6 space-y-2" onSubmit={handleSubmitFlag}>
                     <label className="block text-sm font-medium text-brand">Submit Flag</label>
                     <div className="flex gap-2">
-                      <input ref={flagInputRef} type="text" placeholder="CTF{ANSWER}" className="input" value={flag} onChange={(e) => setFlag(e.target.value)} required />
+                      <input ref={flagInputRef} type="text" placeholder="KCTF{ANSWER}" className="input" value={flag} onChange={(e) => setFlag(e.target.value)} required />
                       <button className="btn btn-solid disabled:opacity-60 focus-ring" disabled={submitting}>
                         {submitting ? "Submitting…" : "Submit"}
                       </button>

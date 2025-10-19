@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Fredoka, Inter } from "next/font/google";
 
 export const metadata: Metadata = {
-  title: "CTF",
+  title: "KCTF",
   description: "Capture The Flag",
 };
 

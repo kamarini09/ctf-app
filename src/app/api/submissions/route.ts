@@ -20,7 +20,7 @@ async function sha256Hex(input: string) {
     .join("");
 }
 
-const FLAG_RE = /^CTF\{[A-Za-z0-9_]{1,80}\}$/;
+const FLAG_RE = /^KCTF\{[A-Za-z0-9_]{1,80}\}$/;
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
     const trimmed = flag.trim();
     if (!FLAG_RE.test(trimmed)) {
-      return NextResponse.json({ ok: false, message: "Invalid flag format (use CTF{ANSWER})" }, { status: 400, headers: noStore });
+      return NextResponse.json({ ok: false, message: "Invalid flag format (use KCTF{ANSWER})" }, { status: 400, headers: noStore });
     }
 
     const sb = sbAdmin();
