@@ -49,6 +49,7 @@ export default function RulesPage() {
             <h2 className="font-display text-xl font-semibold text-brand">Developers’ Note</h2>
             <ul className="mt-3 list-disc space-y-1 pl-6 text-[15px] text-gray-800 marker:text-brand">
               <li>If you’re a developer... please don’t judge the code too harshly 🌻 It was built for speed and fun! I’m sure it wouldn’t pass the PRs 🙈</li>
+              <li>This is ones week work so if it feels is not working please refresh 🙈</li>
             </ul>
           </div>
 
