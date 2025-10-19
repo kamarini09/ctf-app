@@ -15,7 +15,7 @@ type ChallengeDetail = {
   link_url: string | null;
 };
 
-const FLAG_RE = /^KCTF\{[A-Za-z0-9_]{1,80}\}$/;
+const FLAG_RE = /^KCTF\{[A-Za-z0-9_.]{1,80}\}$/;
 
 export default function ChallengesPage() {
   const router = useRouter();

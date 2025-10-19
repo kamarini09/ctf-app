@@ -20,7 +20,7 @@ async function sha256Hex(input: string) {
     .join("");
 }
 
-const FLAG_RE = /^KCTF\{[A-Za-z0-9_]{1,80}\}$/;
+const FLAG_RE = /^KCTF\{[A-Za-z0-9_.]{1,80}\}$/;
 
 export async function POST(req: Request) {
   try {
