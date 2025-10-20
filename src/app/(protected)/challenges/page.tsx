@@ -190,25 +190,25 @@ export default function ChallengesPage() {
           Challenges
         </h1>
 
-        {error && <div className="mb-4 mt-4 border-2 border-red-200 bg-red-50 px-4 py-3 text-red-700">{error}</div>}
+        {error && <div className="mb-4 mt-4 border-2 border-[var(--ctf-red)] bg-red-50 px-4 py-3 text-red-700">{error}</div>}
 
         {/* GRID */}
         {loading ? (
-          <div className="mt-6 grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-6 grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="aspect-square border-2 border-[color-mix(in_srgb,var(--ctf-red)30%,white)] bg-white p-3">
+              <div key={i} className="aspect-square border-2 border-[var(--ctf-red)] bg-white p-3">
                 <div className="h-full w-full animate-pulse bg-gray-100" />
               </div>
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="mt-6 border-2 border-[color-mix(in_srgb,var(--ctf-red)30%,white)] bg-white p-6 text-center text-gray-600">No challenges yet. Check back soon.</div>
+          <div className="mt-6 border-2 border-[var(--ctf-red)] bg-white p-6 text-center text-gray-600">No challenges yet. Check back soon.</div>
         ) : (
-          <div className="mt-6 grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-6 grid gap-1 [grid-auto-rows:1fr] sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
             {items.map((c) => {
               const isSolved = solved.has(String(c.id));
               return (
-                <button key={String(c.id)} onClick={() => openModal(String(c.id))} className={["group relative block aspect-square transition-transform focus-ring", "border-2", isSolved ? "border-transparent" : "border-[color-mix(in_srgb,var(--ctf-red)65%,white)] bg-white"].join(" ")}>
+                <button key={String(c.id)} onClick={() => openModal(String(c.id))} className={["group relative block aspect-square transition-transform focus-ring", "border-2", isSolved ? "border-transparent" : "border-[var(--ctf-red)] bg-white"].join(" ")}>
                   {/* solved: solid red gradient */}
                   {isSolved && (
                     <div
