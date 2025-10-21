@@ -17,7 +17,7 @@ export default function Home() {
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-[var(--ctf-red)]">
       <div className="mx-auto max-w-4xl px-6 py-24">
-        <h1 className="font-display text-center text-white text-4xl md:text-5xl mb-6">Welcome to the CTF</h1>
+        <h1 className="font-display text-center text-white text-4xl md:text-5xl mb-6">Welcome to the KvaliCTF</h1>
 
         <p className="text-center text-white mb-12 opacity-90">Read the rules, join a team, and start solving!</p>
 
